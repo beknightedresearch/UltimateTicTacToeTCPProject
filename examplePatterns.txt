@@ -1,0 +1,8 @@
+Beginning Game:
+OG (offer game) -> AG, I go second
+wait            -> PL, I pick X
+MM (creates board) -> MM ...
+
+Beginning Game:
+OG -> AG, I go first
+PL -> MM (creates board)

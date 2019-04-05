@@ -1,0 +1,55 @@
+Format of TCP Packet:
+command 
+data1 
+data2 
+data3 
+... 
+dataN
+
+The information is new-line delimited. Some commands do not have any data.
+
+Board strings are comma delimited ( e.g. B,B,B,X,X,B,O,O,O )
+
+TCP Commands:
+
+Beginning and Ending Games
+
+OG - offer game
+	data1: game board size (3,9,27)
+	data2: username
+LG - load game
+    data1: username
+    data2: character of the receiver (i.e. X or O)
+    data3: gameboard string
+    data4: gameboard name/description (single word)
+    data5: who goes first (0 for sender, 1 for receiver)
+    data6: last move
+    data7: medium_zoom_board string (B if none)
+    data8: large_zoom_board string  (B if none)
+AG - accept game
+	data1: user chosen to go first (0 for sender, 1 for receiver)
+    data2: username
+PL - pick letter
+    data1: "X" or "O" for which will represent the sender
+EG - end game
+
+
+During Game commands
+
+UR - undo  
+UA - undo accept
+UD - undo deny
+MM - made move
+    data1: last move as row,col
+	data2: current game board as comma seperated of "X", "O", "B", in order left-right, top-down
+SC - send chat
+	data1: text
+
+Save Game File Format:
+(Space-delimited)
+[your_character i.e X or O] [turn, 0 for saver, 1 for opponent] 
+[last move: comma delimited] [board comma delimited]
+[medium_zoom_board comma delimited] [large_zoom_board comma delimited]
+
+If the game does not have the zoom board (due to size),
+just a B is entered.

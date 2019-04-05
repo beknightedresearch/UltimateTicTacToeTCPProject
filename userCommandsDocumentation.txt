@@ -1,0 +1,86 @@
+Instructions:
+Use the commands below to start and play games.
+Unless otherwise specified, commands are applied to the 
+game which last had activity (for example the game which just had an opponent make a move).
+To work with another game, use the switchGame command.
+
+
+makeMove a b
+    Arguments -
+    a: row number of space
+    b: column number of space
+    Function -
+    Make move in spot (a,b) if valid move
+seeBoard
+    shows current board
+switchGame a
+    Arugments -
+    a: index of 
+    Function -
+    Switch active game to the one being played with given player 
+acceptGame a 
+    Arguments -
+    a: username you will go by
+    Function -
+    Accepts current game
+pickLetter a
+    Arguments-
+    a: letter chosen to represent the player. Must be X or O
+    Function-
+
+gameList
+    Function -
+    Prints out all current games (and offers) by user name with their index number
+undo
+    Function-
+    Requests opponent that the sender be able to undo their last move.
+    Only valid if the opponent has not yet made a move.
+acceptUndo
+    Function-
+    Accept an undo request 
+denyUndo
+    Function-
+    Deny an undo request
+endGame
+    Function-
+    Stops current game
+sendMessage a
+    Arguments-
+    a: text-based message
+    Function-
+    Sends a to the opponent
+newGame a b c d
+    Arguments-
+    a: IP address
+    b: Port number
+    c: Game board size (3,9,27)
+    d: Screenname
+    Function -
+    Offers to start a new game with the competitor at a:b with a board size of 3x3, 9x9, or 27x27
+    using the screenname provided
+loadGame a b c d e
+    Arguments-
+    a: IP address
+    b: Port number
+    c: Game board file location
+    d: Screenname for you
+    e: Game name to describe game to competitor
+    Function -
+    Invites the competitor to resume a saved game
+saveGame a
+    Arguments -
+    a: location/name to save game
+    Function -
+    Saves current state of game. It can be resumed later with the load game function.
+seeIP
+    Function -
+    See the IP and port of the competitor (instead of the username)
+currentGame
+    Function -
+    Print out name of competitor in active game
+help
+    Function -
+    Print out this list of commands
+rules
+    Function -
+    Print out the rules to Ultimate Tic Tac Toe
