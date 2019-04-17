@@ -10,7 +10,12 @@ from random import randint
 import math
 import threading
 import time
+from pathlib import Path
 
+'''
+printBoard: prints the board in human-readable form
+board: board in array form to be printed
+'''
 def printBoard(board):
     sideLength=int(math.sqrt(len(board)))
     print(" ",end="")
@@ -38,6 +43,11 @@ def printBoard(board):
             else:
                 print("|"+l+"|", end="")
         print()
+'''
+valid27: determines whether a cordinate of a move is valid on a 27x27 board
+t: the overall coordinate (may be x or y coordinate)
+lT: the corresponding coordinate of the last move
+'''
 def valid27(t,lT):
     if(int(lT) not in range(27)):
         return False
@@ -56,6 +66,11 @@ def valid27(t,lT):
     elif(lT%9 in range(6,9) and t in range(18,27)):
         valid2=True
     return valid1 and valid2
+'''
+isWinning3: Checks if a 3x3 board has been won
+board: the board in array form to check
+t: the letter of player to check if has won
+'''
 def isWinning3(board,t):
     win=False
     combos=[(0,1,2),(3,4,5),(6,7,8),(0,3,6),(1,4,7),(2,5,8),(0,4,8),(6,4,2)]
@@ -64,14 +79,24 @@ def isWinning3(board,t):
             win=True
             break
     return win
+'''
+isValidMove: Checks if a move is valid based upon the last move
+row: row coordinate of move
+col: column coordinate of move
+lastMove: tuple of last move coordinate
+size: size of board
+'''
 def isValidMove(row,col,lastMove,size):
     if(row>int(size)-1 or col>int(size)-1 or row<0 or col <0):
+        #checks if valid coordinates for board size at all
         return False
     lR=int(lastMove[0])
     lC=int(lastMove[1])
     if(lR not in range(int(size)) or lC not in range(int(size))):
+        #if last move is not in range, then this is the first move
         return True
     if(int(size)==3):
+        #anywhere on the board is valid for a 3x3
         return True
     if(int(size)==9):
         if(lC%3*3<=col and col<lC%3*3+3 and lR%3*3<=row and row <lR%3*3+3):
@@ -79,7 +104,22 @@ def isValidMove(row,col,lastMove,size):
         else:
             return False
     if(int(size)==27):
+        #checks if both the x and y coordinate are valid
         return valid27(row,lR) and valid27(col,lC)
+'''
+checkWin: checks if a player is winning the board
+s: socket of game to check
+last_move: the dictionary of last moves
+game_boards: dictionary of game boards
+size: size of board
+medium_zoom_board: dictionary of medium zoom boards
+large_zoom_board: dictionary of large zoom boards
+charToCheck: letter of player to check if they have won
+competitors: dictionary of competitors
+
+the entire dictionaries are passed to simplify updating their values
+(because dictionaries are passed by reference)
+'''
 def checkWin(s,last_move,game_boards,size,\
      medium_zoom_board, large_zoom_board, charToCheck,\
           competitors):
@@ -105,22 +145,32 @@ def checkWin(s,last_move,game_boards,size,\
                     print(competitors[s]+" has won the game!")
                     print("You can continue playing if you would like, otherwise use endGame")          
 
+'''
+boardToString: Converts board array to string form
+board: board to convert
+'''
 def boardToString(board):
     strB=""
     for i in range(len(board)-1):
         strB=strB+board[i]+","
     strB=strB+board[len(board)-1]
     return strB
-def keyboardListening(threadcount,q):
-    ArgumentLength={"makeMove":2,"seeBoard":0,"switchGame":1,"acceptGame":1,"pickLetter":1,"gameList":0,"undo":0,"acceptUndo":0,"denyUndo":0,"endGame":0,"newGame":4,"seeIP":0,"help":0,"currentGame":0,"rules":0,"loadGame":5,"saveGame":1}
+'''
+keyboardListening: thread to listen for commands from the user
+threadcount: number of threads
+q: queue to push new commands to
+readyForCommands: Event flag of whether to prompt for more commands
+'''
+def keyboardListening(threadcount,q, readyForCommands):
+    ArgumentLength={"makeMove":2,"seeBoard":0,"switchGame":1,"acceptGame":1,"pickLetter":1,"gameList":0,"undo":0,"acceptUndo":0,"denyUndo":0,"endGame":0,"newGame":4,"seeIP":0,"help":0,"currentGame":0,"rules":0,"loadGame":5,"saveGame":1,"openPort":1,"closePort":1,"portsList":0}
     while True:
-        time.sleep(.45)
-        #prevents input instruction appearing before previous output
+        readyForCommands.wait()
+        #has to wait for output of other things to be printed out
         command = input("Input command: ")
         splitOut=command.split()
         if(len(splitOut)==0):
             print("Invalid command")
-        elif(splitOut[0] in ["makeMove","seeBoard","switchGame","acceptGame","pickLetter","gameList","undo","acceptUndo","denyUndo","endGame","sendMessage","newGame","seeIP","currentGame","help","rules","loadGame","saveGame"]):
+        elif(splitOut[0] in ["makeMove","seeBoard","switchGame","acceptGame","pickLetter","gameList","undo","acceptUndo","denyUndo","endGame","sendMessage","newGame","seeIP","currentGame","help","rules","loadGame","saveGame","openPort","closePort","portsList"]):
             valid=False
             if(splitOut[0]=="sendMessage"):
                 valid=True
@@ -128,10 +178,18 @@ def keyboardListening(threadcount,q):
                 valid=True
             if(valid):
                 q.put(command)
+                readyForCommands.clear()
+                #wait for other thread to finish handling these commands
             else:
                 print("Invalid number of arguments")
         else:
             print("Invalid command")
+'''
+findSmallBoard: returns the little board (3x3) associated with a row and col of a big board
+board: board the small board is located
+row: row coordinate of box in small board
+col: col coordinate of box in small board
+'''
 def findSmallBoard(board,row,col):
     littleBoard=[]
     for l in range(3):
@@ -143,7 +201,7 @@ def findSmallBoard(board,row,col):
     removeSocketFromEverything: When communication terminates with a socket,
     it needs to be removed from all of the data structures.
 """
-def removeSocketFromEverything(sckt, inputs, outputs, message_queues, game_boards, undo_boards,\
+def removeSocketFromEverything(sckt, inputs, outputs, message_queues, servers, game_boards, undo_boards,\
     board_size,game_indexes, indexes_to_game,competitors,your_character,your_move,second_last_move,last_move,\
         medium_zoom_board,large_zoom_board,your_undo_requests,their_undo_requests, readable,writable,exceptional):
         if sckt in inputs:
@@ -156,34 +214,44 @@ def removeSocketFromEverything(sckt, inputs, outputs, message_queues, game_board
             writable.remove(sckt)
         if sckt in exceptional:
             exceptional.remove(sckt)
-        sckt.close()
-        del message_queues[sckt]
-        del indexes_to_game[game_indexes[sckt]]
-        del your_move[sckt]
-        del second_last_move[sckt]
-        del last_move[sckt]
-        del your_character[sckt]
-        del game_boards[sckt]
-        del undo_boards[sckt]
-        del game_indexes[sckt]
-        del board_size[sckt]
-        del competitors[sckt]
-        try:
-            #smaller boards will not have zoom boards
-            del medium_zoom_board[sckt]
-            del large_zoom_board[sckt]
-        except KeyError:
-            pass
-        if sckt in your_undo_requests:
-            your_undo_requests.remove(sckt)
-        if sckt in their_undo_requests:
-            their_undo_requests.remove(sckt)
+        if sckt in servers.values():
+            del servers[sckt.getsockname()[1]]
+            sckt.close()
+        else:
+            #only clients have the following
+            sckt.close()
+            try:
+                del message_queues[sckt]
+                del indexes_to_game[game_indexes[sckt]]
+                del your_move[sckt]
+                del second_last_move[sckt]
+                del last_move[sckt]
+                del your_character[sckt]
+                del game_boards[sckt]
+                del undo_boards[sckt]
+                del game_indexes[sckt]
+                del board_size[sckt]
+                del competitors[sckt]
+                try:
+                    #smaller boards will not have zoom boards
+                    del medium_zoom_board[sckt]
+                    del large_zoom_board[sckt]
+                except KeyError:
+                    pass
+                if sckt in your_undo_requests:
+                    your_undo_requests.remove(sckt)
+                if sckt in their_undo_requests:
+                    their_undo_requests.remove(sckt)
+            except KeyError:
+                print("There was an error removing the socket")
+                pass
+        
 
 """
     handleCommands: Responsible for handling commands by the user
     Data structures the same as from socketListening
 """
-def handleCommands(activeGame, inputs, outputs, message_queues, game_boards, undo_boards,\
+def handleCommands(activeGame, inputs, outputs, message_queues, serverSocks, servers, game_boards, undo_boards,\
     board_size,game_indexes, indexes_to_game,competitors,your_character,your_move,second_last_move,last_move,\
         medium_zoom_board,large_zoom_board,your_undo_requests,their_undo_requests, readable,writable,exceptional,\
             emptyBoards, q, currentIndex):
@@ -194,11 +262,11 @@ def handleCommands(activeGame, inputs, outputs, message_queues, game_boards, und
             pass
         else:
             splitOut=next_command.split()
-            print()
+            print("")
             if(len(splitOut)==0):
                 print("Invalid command")
             elif(splitOut[0]=="makeMove"):
-                errorFlag=True
+                noErrorsFlag=True
                 if(activeGame is not None and activeGame in writable):
                     if(your_move[activeGame]):
                         if(activeGame not in their_undo_requests):
@@ -209,9 +277,9 @@ def handleCommands(activeGame, inputs, outputs, message_queues, game_boards, und
                                 column = int(splitOut[2])
                             except ValueError:
                                 print("Invalid argument.")
-                                errorFlag=False
+                                noErrorsFlag=False
                             board=game_boards[activeGame]
-                            if(isValidMove(row,column,last_move[activeGame],board_size[activeGame]) and errorFlag):
+                            if(isValidMove(row,column,last_move[activeGame],board_size[activeGame]) and noErrorsFlag):
                                 #if valid move update all of the data structures and send to opponent
                                 undo_boards[activeGame]=game_boards[activeGame].copy()
                                 board[row*rowlength+column]=your_character[activeGame]
@@ -332,7 +400,7 @@ def handleCommands(activeGame, inputs, outputs, message_queues, game_boards, und
                     msg="EG\n"
                     activeGame.send(msg.encode())
                     #delete the socket from all of the data structures
-                    removeSocketFromEverything(activeGame, inputs, outputs, message_queues, game_boards, undo_boards,\
+                    removeSocketFromEverything(activeGame, inputs, outputs, message_queues, servers, game_boards, undo_boards,\
                         board_size,game_indexes, indexes_to_game,competitors,your_character,your_move,second_last_move,last_move,\
                             medium_zoom_board,large_zoom_board,your_undo_requests,their_undo_requests, readable,writable,exceptional)
                 else:
@@ -344,8 +412,32 @@ def handleCommands(activeGame, inputs, outputs, message_queues, game_boards, und
                     activeGame.send(msg.encode())
                 else:
                     print("There is not an active game, use switchGame to choose one or newGame to start one.")
+            elif(splitOut[0]=="openPort"):
+                try:
+                    if int(splitOut[1]) in range(1024,65337):
+                        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        server.setblocking(0)
+                        server.bind(('localhost', int(splitOut[1])))
+                        server.listen(5)
+                        serverSocks.put((server,int(splitOut[1])))
+                    else:
+                        print("Invalid port number. Must be between 1024 and 65336.")
+                except OSError:
+                    print("There was an error. Try using a different port.")
+            elif(splitOut[0]=="closePort"):
+                if int(splitOut[1]) in servers.keys():
+                    sckt = servers[int(splitOut[1])]
+                    removeSocketFromEverything(sckt, inputs, outputs, message_queues, servers, game_boards, undo_boards,\
+                            board_size,game_indexes, indexes_to_game,competitors,your_character,your_move,second_last_move,last_move,\
+                                medium_zoom_board,large_zoom_board,your_undo_requests,their_undo_requests, readable,writable,exceptional)
+                else:
+                    print("There is not a socket associated with that port number.")
+            elif(splitOut[0]=="portsList"):
+                print("Your open ports are:")
+                for port in servers.keys():
+                    print(port)
             elif(splitOut[0]=="newGame"):
-                errorFlag = True
+                noErrorsFlag = True
                 try:
                     clientSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
                     clientSocket.connect((splitOut[1],int(splitOut[2])))
@@ -353,13 +445,11 @@ def handleCommands(activeGame, inputs, outputs, message_queues, game_boards, und
                     clientSocket.send(commandMsg.encode())
                 except ValueError:
                     print("There was an error creating the socket. Check your arguments.")
-                    print("Input command: ")
-                    errorFlag=False
+                    noErrorsFlag=False
                 except ConnectionRefusedError:
                     print("The connection was refused. Check your arguments")
-                    print("Input command: ")
-                    errorFlag=False
-                if(errorFlag):
+                    noErrorsFlag=False
+                if(noErrorsFlag):
                     message_queues[clientSocket] = queue.Queue()
                     activeGame=clientSocket
                     inputs.append(activeGame)
@@ -382,20 +472,19 @@ def handleCommands(activeGame, inputs, outputs, message_queues, game_boards, und
                     last_move[activeGame]=[-1,-1]
                     second_last_move[activeGame]=[]
             elif(splitOut[0]=="loadGame"):
-                errorFlag=True
+                noErrorsFlag=True
                 try:
                     clientSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
                     clientSocket.connect((splitOut[1],int(splitOut[2])))
                 except ConnectionRefusedError:
                     print("Connection refused. Check IP and port number.")
-                    print("Input command: ")
-                    errorFlag=False
+                    noErrorsFlag=False
                 except ValueError:
                     print("Invalid command. Check your arguments.")
-                    errorFlag=False
-                if(errorFlag):
+                    noErrorsFlag=False
+                if(noErrorsFlag):
                     try:
-                        f=open(splitOut[3],"r")
+                        f=open(Path(splitOut[3]),"r")
                         CharBoard=f.read()
                         char = CharBoard.split()[0]
                         last = CharBoard.split()[1]
@@ -403,13 +492,13 @@ def handleCommands(activeGame, inputs, outputs, message_queues, game_boards, und
                         board = CharBoard.split()[3]
                     except IOError:
                         print("Invalid File")
-                        errorFlag=False
+                        noErrorsFlag=False
                     except KeyError:
                         print("Invalid File")
-                        errorFlag=False
+                        noErrorsFlag=False
                     except IndexError:
                         print("Invalid File")
-                        errorFlag=False
+                        noErrorsFlag=False
                     if(char=="X"):
                         #the character sent will be the character of the receiver instead of us
                         commandMsg = "LG "+splitOut[4]+" O "+board+" "+splitOut[5]+" "+str(last)+" "+lastMove+" "+CharBoard.split()[4]+" "+CharBoard.split()[5]
@@ -417,8 +506,8 @@ def handleCommands(activeGame, inputs, outputs, message_queues, game_boards, und
                         commandMsg="LG "+splitOut[4]+" X "+board+" "+splitOut[5]+" "+str(last)+" "+lastMove+" "+CharBoard.split()[4]+" "+CharBoard.split()[5]
                     else:
                         print("Invalid File")
-                        errorFlag=False
-                if(errorFlag):
+                        noErrorsFlag=False
+                if(noErrorsFlag):
                     boardAsArray=board.split(",")
                     clientSocket.send(commandMsg.encode())
                     message_queues[clientSocket] = queue.Queue()
@@ -448,8 +537,7 @@ def handleCommands(activeGame, inputs, outputs, message_queues, game_boards, und
                 board=game_boards[activeGame]
                 print(board)
                 try:
-                    f=open(location,"w")
-                    print(your_character[activeGame])
+                    f=open(Path(location),"w")
                     print(your_character[activeGame]+" ",file=f,end="")
                     if(your_move[activeGame]):
                         last=0
@@ -462,13 +550,13 @@ def handleCommands(activeGame, inputs, outputs, message_queues, game_boards, und
                     print(" ", file=f,end="")
                     if activeGame in medium_zoom_board.keys():
                         for i in range(len(medium_zoom_board[activeGame])):
-                            print(medium_zoom_board[i]+",",file=f,end="")
+                            print(medium_zoom_board[activeGame][i]+",",file=f,end="")
                     else:
                         print("B",file=f,end="")
                     print(" ",file=f,end="")
                     if activeGame in large_zoom_board.keys():
                         for i in range(len(large_zoom_board[activeGame])):
-                            print(medium_zoom_board[i]+",",file=f,end="")
+                            print(large_zoom_board[activeGame][i]+",",file=f,end="")
                     else:
                         print("B",file=f,end="")
                     f.close()
@@ -486,11 +574,11 @@ def handleCommands(activeGame, inputs, outputs, message_queues, game_boards, und
                 else:
                     print("There is not an active game, use switchGame to choose one or newGame to start one.")
             elif(splitOut[0]=="help"):
-                f=open('userCommandsDocumentation.txt','r')
+                f=open(Path('userCommandsDocumentation.txt'),'r')
                 for line in f:
                     print(line)
             elif(splitOut[0]=="rules"):
-                f=open('rules.txt','r')
+                f=open(Path('rules.txt'),'r')
                 for line in f:
                     print(line)
             else:
@@ -502,10 +590,11 @@ def handleCommands(activeGame, inputs, outputs, message_queues, game_boards, und
    Data structures the same as from socketListening
 
 """
-def handleData(command, data, s,activeGame, inputs, outputs, message_queues, game_boards, undo_boards,\
+def handleData(command, data, s,activeGame, inputs, outputs, message_queues, servers, game_boards, undo_boards,\
     board_size,game_indexes, indexes_to_game,competitors,your_character,your_move,second_last_move,last_move,\
         medium_zoom_board,large_zoom_board,your_undo_requests,their_undo_requests, readable,writable,exceptional,\
             emptyBoards, currentIndex):
+    print("")
     if(command=="OG"):
         bSize=data.splitlines()[0]
         competitor=data.splitlines()[1]
@@ -596,7 +685,7 @@ def handleData(command, data, s,activeGame, inputs, outputs, message_queues, gam
         print(competitors[s]+" has ended your game (index "+str(game_indexes[s])+").")
         print("Please choose a new active game using command switchGame [index]") 
         s.close()
-        removeSocketFromEverything(s, inputs, outputs, message_queues, game_boards, undo_boards,\
+        removeSocketFromEverything(s, inputs, outputs, message_queues, servers, game_boards, undo_boards,\
             board_size,game_indexes, indexes_to_game,competitors,your_character,your_move,second_last_move,last_move,\
                 medium_zoom_board,large_zoom_board,your_undo_requests,their_undo_requests, readable,writable,exceptional)
     elif(command=="UR"):
@@ -646,11 +735,14 @@ def handleData(command, data, s,activeGame, inputs, outputs, message_queues, gam
 
 """
 socketListening: Responsible for listening for incoming communciations and executing commands
+
 threadcount: iterable required for Threads
 q: Queue which keyboardListening adds outstanding commands to and this thread processes
-server: The server socket
+serverSocks: The queue of new server sockets to create
+readyForCommands: Event flag to prevent the keyboard listening thread from trying
+    to read commands while the app is printing out information
 """
-def socketListening(threadcount,q,server):
+def socketListening(threadcount,q,serverSocks, readyForCommands):
     """
         Data structures:
         inputs, outputs: lists of all sockets
@@ -682,9 +774,12 @@ def socketListening(threadcount,q,server):
         activeGame: Socket which is currently "active" the one which command will be applied to.
         empty3, empty9, empty27: Constants of new board of each of the 3 sizes
         emptyBoards: Dictionary of new board choices
+        readable,writable,exceptional: back-up empty arrays when the select statement fails because 
+            no sockets have been opened yet
     """
     inputs=[]
     outputs=[]
+    servers={}
     message_queues={}
     game_boards={}
     undo_boards={}
@@ -705,25 +800,41 @@ def socketListening(threadcount,q,server):
     empty3=["B","B","B","B","B","B","B","B","B"]
     empty9=[]
     empty27=[]
+    readable=[]
+    writable=[]
+    exceptional=[]
     #generate empty board (since they are large)
     for i in range(27*27):
         empty27.append("B")
     for i in range(81):
         empty9.append("B")
     emptyBoards={"3":empty3,"9":empty9,"27":empty27}
-    inputs.append(server)
-    while inputs:
-        readable, writable, exceptional = select.select(
-            inputs, outputs, inputs, 0.5)
-        #timeout is used to ensure new commands are responded to
+    #inputs.append(server)
+    while True:
+        while (not serverSocks.empty()):
+            nextSock, port = serverSocks.get_nowait()
+            inputs.append(nextSock)
+            servers[port]=nextSock
+        try:
+            readable, writable, exceptional = select.select(
+                inputs, outputs, inputs, 0.5)
+            #timeout is used to ensure new commands are responded to
+        except OSError:
+            #select statement errors out on Windows if both inputs and outputs
+            #are empty.
+            readable=[]
+            writable=[]
+            exceptional=[]
+
         
         #Before returning to the sockets, go through outstanding commands
-        activeGame, currentIndex=handleCommands(activeGame, inputs, outputs, message_queues, game_boards, undo_boards,\
+        readyForCommands.clear()
+        activeGame, currentIndex=handleCommands(activeGame, inputs, outputs, message_queues, serverSocks, servers, game_boards, undo_boards,\
             board_size,game_indexes, indexes_to_game,competitors,your_character,your_move,second_last_move,last_move,\
                 medium_zoom_board,large_zoom_board,your_undo_requests,their_undo_requests, readable,writable,exceptional,\
                     emptyBoards, q, currentIndex)
         for s in readable:
-            if s is server:
+            if s in servers.values():
                 #accept all connection requests
                 connection, client_address = s.accept()
                 connection.setblocking(0)
@@ -740,11 +851,11 @@ def socketListening(threadcount,q,server):
                         except KeyError:
                             print("There was an error with the socket")
                 except ConnectionResetError:
-                    removeSocketFromEverything(s, inputs, outputs, message_queues, game_boards, undo_boards,\
+                    removeSocketFromEverything(s, inputs, outputs, message_queues, servers, game_boards, undo_boards,\
                         board_size,game_indexes, indexes_to_game,competitors,your_character,your_move,second_last_move,last_move,\
                             medium_zoom_board,large_zoom_board,your_undo_requests,their_undo_requests, readable,writable,exceptional)
                     print("The connection was forcibly closed.")
-                    print("Input command: ")
+                    #print("Input command: ")
         for s in writable:
             #before processing more incoming commands, do all outstanding outgoing commands
             try:
@@ -755,49 +866,39 @@ def socketListening(threadcount,q,server):
                 next_msg=next_msg.decode()
                 command = next_msg.splitlines()[0]
                 data = next_msg[len(command)+1:]
-                print()
-                activeGame, currentIndex=handleData(command, data, s, activeGame, inputs, outputs, message_queues, game_boards, undo_boards,\
+                readyForCommands.clear()
+                activeGame, currentIndex=handleData(command, data, s, activeGame, inputs, outputs, message_queues, servers, game_boards, undo_boards,\
                     board_size,game_indexes, indexes_to_game,competitors,your_character,your_move,second_last_move,last_move,\
                         medium_zoom_board,large_zoom_board,your_undo_requests,their_undo_requests, readable,writable,exceptional,\
                             emptyBoards, currentIndex)
                 print("Input command: ")        
+        readyForCommands.set()
+        #the app is now ready for more incoming commands
         for s in exceptional:
             inputs.remove(s)
             if s in outputs:
                 outputs.remove(s)
             s.close()
-            removeSocketFromEverything(s, inputs, outputs, message_queues, game_boards, undo_boards,\
+            removeSocketFromEverything(s, inputs, outputs, message_queues, servers, game_boards, undo_boards,\
                 board_size,game_indexes, indexes_to_game,competitors,your_character,your_move,second_last_move,last_move,\
                     medium_zoom_board,large_zoom_board,your_undo_requests,their_undo_requests, readable,writable,exceptional)
 
 print("Welcome to Ultimate Tic-Tac-Toe")
 listeningport=0
 threadcount=0
-serverFlag=True
-#checks if server is sucessfully bound
-while(int(listeningport) not in range(1024, 65536)):
-    listeningport = input("What port would you like for competitors to connect to (1024-65535)?  ")
-while(serverFlag):
-    try:
-        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server.setblocking(0)
-        server.bind(('localhost', int(listeningport)))
-        server.listen(5)
-        serverFlag=False
-    except OSError:
-        print("There was an error. Try using a different port.")
-        listeningport = input("What port would you like for competitors to connect to (1024-65535)?  ")
-
 print("You are ready to start playing Ultimate Tic-Tac-Toe")
 print("For help and list of commands, use the command help. For rules, use the command rules.")
 commandsQueue = queue.Queue()
+serverSocks = queue.Queue()
 # a thread is created and started
 threadcount=1
-t1 =threading.Thread(target=keyboardListening, args=(threadcount,commandsQueue)) 
+readyForCommands = threading.Event()
+readyForCommands.set()
+t1 =threading.Thread(target=keyboardListening, args=(threadcount,commandsQueue, readyForCommands)) 
 t1.daemon=False
 t1.start()
 threadcount=2
-t2 = threading.Thread(target=socketListening,args=(threadcount,commandsQueue,server))
+t2 = threading.Thread(target=socketListening,args=(threadcount,commandsQueue,serverSocks,readyForCommands))
 t2.start()
 
 
