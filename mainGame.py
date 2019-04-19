@@ -107,47 +107,47 @@ def isValidMove(row,col,lastMove,size):
         #checks if both the x and y coordinate are valid
         return valid27(row,lR) and valid27(col,lC)
 '''
-checkWin: checks if a player is winning the board
-s: socket of game to check
-last_move: the dictionary of last moves
-game_boards: dictionary of game boards
-size: size of board
-medium_zoom_board: dictionary of medium zoom boards
-large_zoom_board: dictionary of large zoom boards
-charToCheck: letter of player to check if they have won
-competitors: dictionary of competitors
+    checkWin: checks if a player is winning the board
+    s: socket of game to check
+    last_move: the last move as a tuple
+    game_board: the game board
+    size: size of board
+    medium_zoom_board: dictionary of medium zoom boards
+    large_zoom_board: dictionary of large zoom boards
+    charToCheck: letter of player to check if they have won
+    competitor: screenname of competitor
 
-the entire dictionaries are passed to simplify updating their values
-(because dictionaries are passed by reference)
+    the entire dictionaries are passed to simplify updating their values
+    (because dictionaries are passed by reference)
 '''
-def checkWin(s,last_move,game_boards,size,\
+def checkWin(s,last_move,game_board,size,\
      medium_zoom_board, large_zoom_board, charToCheck,\
-          competitors):
+          competitor):
     if(size==3):
-        if(isWinning3(game_boards[s],charToCheck)):
-            print(competitors[s]+" has won the game!")
+        if(isWinning3(game_board,charToCheck)):
+            print(competitor+" has won the game!")
             print("You can continue playing if you would like, otherwise use endGame")
     if(size==9):
-        smallBoard=findSmallBoard(game_boards[s],last_move[s][0]//3,last_move[s][1]//3)
+        smallBoard=findSmallBoard(game_board,last_move[0]//3,last_move[1]//3)
         if(isWinning3(smallBoard,charToCheck)):
-            medium_zoom_board[s][(last_move[s][0]//3)*3+last_move[s][1]//3]=charToCheck
+            medium_zoom_board[s][(last_move[0]//3)*3+last_move[1]//3]=charToCheck
             if(isWinning3(medium_zoom_board[s],charToCheck)):
-                print(competitors[s]+" has won the game!")
+                print(competitor+" has won the game!")
                 print("You can continue playing if you would like, otherwise use endGame")
     if(size==27):
-        smallBoard=findSmallBoard(game_boards[s],last_move[s][0]//3,last_move[s][1]//3)
+        smallBoard=findSmallBoard(game_board,last_move[0]//3,last_move[1]//3)
         if(isWinning3(smallBoard,charToCheck)):
-            medium_zoom_board[s][(last_move[s][0]//3)*9+last_move[s][1]//3]=charToCheck
-            smallMedZoomBoard=findSmallBoard(medium_zoom_board[s],last_move[s][0]//9,last_move[s][1]//9)
+            medium_zoom_board[s][(last_move[0]//3)*9+last_move[1]//3]=charToCheck
+            smallMedZoomBoard=findSmallBoard(medium_zoom_board[s],last_move[0]//9,last_move[1]//9)
             if(isWinning3(smallMedZoomBoard,charToCheck)):
-                large_zoom_board[s][(last_move[s][0]//9)*3+last_move[s][1]//9]=charToCheck
+                large_zoom_board[s][(last_move[0]//9)*3+last_move[1]//9]=charToCheck
                 if(isWinning3(large_zoom_board[s],charToCheck)):
-                    print(competitors[s]+" has won the game!")
+                    print(competitor+" has won the game!")
                     print("You can continue playing if you would like, otherwise use endGame")          
 
 '''
-boardToString: Converts board array to string form
-board: board to convert
+    boardToString: Converts board array to string form
+    board: board to convert
 '''
 def boardToString(board):
     strB=""
@@ -156,10 +156,10 @@ def boardToString(board):
     strB=strB+board[len(board)-1]
     return strB
 '''
-keyboardListening: thread to listen for commands from the user
-threadcount: number of threads
-q: queue to push new commands to
-readyForCommands: Event flag of whether to prompt for more commands
+    keyboardListening: thread to listen for commands from the user
+    threadcount: number of threads
+    q: queue to push new commands to
+    readyForCommands: Event flag of whether to prompt for more commands
 '''
 def keyboardListening(threadcount,q, readyForCommands):
     ArgumentLength={"makeMove":2,"seeBoard":0,"switchGame":1,"acceptGame":1,"pickLetter":1,"gameList":0,"undo":0,"acceptUndo":0,"denyUndo":0,"endGame":0,"newGame":4,"seeIP":0,"help":0,"currentGame":0,"rules":0,"loadGame":5,"saveGame":1,"openPort":1,"closePort":1,"portsList":0}
@@ -185,10 +185,10 @@ def keyboardListening(threadcount,q, readyForCommands):
         else:
             print("Invalid command")
 '''
-findSmallBoard: returns the little board (3x3) associated with a row and col of a big board
-board: board the small board is located
-row: row coordinate of box in small board
-col: col coordinate of box in small board
+    findSmallBoard: returns the little board (3x3) associated with a row and col of a big board
+    board: board the small board is located
+    row: row coordinate of box in small board
+    col: col coordinate of box in small board
 '''
 def findSmallBoard(board,row,col):
     littleBoard=[]
@@ -216,35 +216,33 @@ def removeSocketFromEverything(sckt, inputs, outputs, message_queues, servers, g
             exceptional.remove(sckt)
         if sckt in servers.values():
             del servers[sckt.getsockname()[1]]
-            sckt.close()
-        else:
-            #only clients have the following
-            sckt.close()
+
+        sckt.close()
+        try:
+            del message_queues[sckt]
+            del indexes_to_game[game_indexes[sckt]]
+            del your_move[sckt]
+            del second_last_move[sckt]
+            del last_move[sckt]
+            del your_character[sckt]
+            del game_boards[sckt]
+            del undo_boards[sckt]
+            del game_indexes[sckt]
+            del board_size[sckt]
+            del competitors[sckt]
             try:
-                del message_queues[sckt]
-                del indexes_to_game[game_indexes[sckt]]
-                del your_move[sckt]
-                del second_last_move[sckt]
-                del last_move[sckt]
-                del your_character[sckt]
-                del game_boards[sckt]
-                del undo_boards[sckt]
-                del game_indexes[sckt]
-                del board_size[sckt]
-                del competitors[sckt]
-                try:
-                    #smaller boards will not have zoom boards
-                    del medium_zoom_board[sckt]
-                    del large_zoom_board[sckt]
-                except KeyError:
-                    pass
-                if sckt in your_undo_requests:
-                    your_undo_requests.remove(sckt)
-                if sckt in their_undo_requests:
-                    their_undo_requests.remove(sckt)
+                #smaller boards will not have zoom boards
+                del medium_zoom_board[sckt]
+                del large_zoom_board[sckt]
             except KeyError:
-                print("There was an error removing the socket")
                 pass
+            if sckt in your_undo_requests:
+                your_undo_requests.remove(sckt)
+            if sckt in their_undo_requests:
+                their_undo_requests.remove(sckt)
+        except KeyError:
+            print("There was an error removing the socket")
+            pass
         
 
 """
@@ -295,9 +293,9 @@ def handleCommands(activeGame, inputs, outputs, message_queues, serverSocks, ser
                                 #Check to see if this move has caused you to win the game
                                 charToCheck=your_character[activeGame]
                                 size=int(board_size[activeGame])
-                                checkWin(activeGame,last_move,game_boards,size,\
+                                checkWin(activeGame,last_move[activeGame],game_boards[activeGame],size,\
                                     medium_zoom_board,large_zoom_board,charToCheck,\
-                                        competitors)                            
+                                        competitors[activeGame])                            
                             else:
                                 print("Invalid move")
                         else:
@@ -420,6 +418,7 @@ def handleCommands(activeGame, inputs, outputs, message_queues, serverSocks, ser
                         server.bind(('localhost', int(splitOut[1])))
                         server.listen(5)
                         serverSocks.put((server,int(splitOut[1])))
+                        print("Port has been opened.")
                     else:
                         print("Invalid port number. Must be between 1024 and 65336.")
                 except OSError:
@@ -430,6 +429,7 @@ def handleCommands(activeGame, inputs, outputs, message_queues, serverSocks, ser
                     removeSocketFromEverything(sckt, inputs, outputs, message_queues, servers, game_boards, undo_boards,\
                             board_size,game_indexes, indexes_to_game,competitors,your_character,your_move,second_last_move,last_move,\
                                 medium_zoom_board,large_zoom_board,your_undo_requests,their_undo_requests, readable,writable,exceptional)
+                    print("Port has been closed.")
                 else:
                     print("There is not a socket associated with that port number.")
             elif(splitOut[0]=="portsList"):
@@ -725,9 +725,9 @@ def handleData(command, data, s,activeGame, inputs, outputs, message_queues, ser
             charToCheck="Y"
         else:
             charToCheck="X"
-        checkWin(s,last_move,game_boards,size,\
+        checkWin(s,last_move[s],game_boards[s],size,\
             medium_zoom_board,large_zoom_board,charToCheck,\
-                competitors)
+                competitors[s])
         printBoard(game_boards[s])
         activeGame=s
         your_move[s]=True                                 

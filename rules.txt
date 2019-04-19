@@ -11,7 +11,7 @@ Tic-Tac-Toe board. Then, the next player must play in one of the 9 smaller squar
 within the top right square of the large Tic-Tac-Toe board.
 
 Level Three (27x27 Board):
-This is extreme Tic-Tac-Toe. There is a large Tic-Tac-Toe board embedded with 8 games of 
+This is extreme Tic-Tac-Toe. There is a large Tic-Tac-Toe board embedded with 9 games of 
 Ultimate Tic-Tac-Toe. As before, the first move is open. Afterwards, where in the medium size board
 a player plays in forces which square of the large board the next player plays in 
 (left middle->left middle, right bottom->right bottom, etc). Further, where in the small
