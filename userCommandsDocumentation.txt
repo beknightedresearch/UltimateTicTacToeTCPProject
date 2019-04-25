@@ -3,12 +3,16 @@ Use the commands below to start and play games.
 Unless otherwise specified, commands are applied to the 
 game which last had activity (for example the game which just had an opponent make a move).
 To work with another game, use the switchGame command.
-
+-
 Reference commands:
-
+-
 help
     Function -
     Print out this list of commands
+arguments a
+    a: command (e.g. "openPort")
+    Function -
+    Print out the needed arguments for given command
 rules
     Function -
     Print out the rules to Ultimate Tic Tac Toe
@@ -39,7 +43,7 @@ newGame a b c d
     a: IP address
     b: Port number
     c: Game board size (3,9,27)
-    d: Screenname (no spaces)
+    d: Screenname (use double quotes if spaces)
     Function -
     Offers to start a new game with the competitor at a:b with a board size of 3x3, 9x9, or 27x27
     using the screenname provided
@@ -47,9 +51,9 @@ loadGame a b c d e
     Arguments-
     a: IP address
     b: Port number
-    c: Game board file location (no spaces)
-    d: Screenname for you (no spaces)
-    e: Game name to describe game to competitor (no spaces)
+    c: Game board file location (use double quotes if spaces)
+    d: Screenname for you (use double quotes if spaces)
+    e: Game name to describe game to competitor (use double quotes if spaces)
     Function -
     Invites the competitor with IP/port to resume a saved game
 pickLetter a
@@ -107,12 +111,12 @@ Advanced Features:
 
 sendMessage a
     Arguments-
-    a: text-based message
+    a: text-based message (double quotes not needed)
     Function-
     Sends a to the opponent
 saveGame a
     Arguments -
-    a: location/name to save game (no spaces)
+    a: location/name to save game (use double quotes if spaces)
     Function -
     Saves current state of game. It can be resumed later with the load game function.
 

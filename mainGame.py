@@ -11,10 +11,12 @@ import math
 import threading
 import time
 from pathlib import Path
+import linecache
+import shlex
 
 '''
-printBoard: prints the board in human-readable form
-board: board in array form to be printed
+    printBoard: prints the board in human-readable form
+    board: board in array form to be printed
 '''
 def printBoard(board):
     sideLength=int(math.sqrt(len(board)))
@@ -44,9 +46,9 @@ def printBoard(board):
                 print("|"+l+"|", end="")
         print()
 '''
-valid27: determines whether a cordinate of a move is valid on a 27x27 board
-t: the overall coordinate (may be x or y coordinate)
-lT: the corresponding coordinate of the last move
+    valid27: determines whether a cordinate of a move is valid on a 27x27 board
+    t: the overall coordinate (may be x or y coordinate)
+    lT: the corresponding coordinate of the last move
 '''
 def valid27(t,lT):
     if(int(lT) not in range(27)):
@@ -67,9 +69,9 @@ def valid27(t,lT):
         valid2=True
     return valid1 and valid2
 '''
-isWinning3: Checks if a 3x3 board has been won
-board: the board in array form to check
-t: the letter of player to check if has won
+    isWinning3: Checks if a 3x3 board has been won
+    board: the board in array form to check
+    t: the letter of player to check if has won
 '''
 def isWinning3(board,t):
     win=False
@@ -80,11 +82,11 @@ def isWinning3(board,t):
             break
     return win
 '''
-isValidMove: Checks if a move is valid based upon the last move
-row: row coordinate of move
-col: column coordinate of move
-lastMove: tuple of last move coordinate
-size: size of board
+    isValidMove: Checks if a move is valid based upon the last move
+    row: row coordinate of move
+    col: column coordinate of move
+    lastMove: tuple of last move coordinate
+    size: size of board
 '''
 def isValidMove(row,col,lastMove,size):
     if(row>int(size)-1 or col>int(size)-1 or row<0 or col <0):
@@ -137,11 +139,15 @@ def checkWin(s,last_move,game_board,size,\
     if(size==27):
         smallBoard=findSmallBoard(game_board,last_move[0]//3,last_move[1]//3)
         if(isWinning3(smallBoard,charToCheck)):
+            #if winning the 3x3 board contained update the medium zoom board
             medium_zoom_board[s][(last_move[0]//3)*9+last_move[1]//3]=charToCheck
             smallMedZoomBoard=findSmallBoard(medium_zoom_board[s],last_move[0]//9,last_move[1]//9)
+            #find the 3x3 board on the medium zoom board that was just won
             if(isWinning3(smallMedZoomBoard,charToCheck)):
+                #if winning that one, update the large zoom board
                 large_zoom_board[s][(last_move[0]//9)*3+last_move[1]//9]=charToCheck
                 if(isWinning3(large_zoom_board[s],charToCheck)):
+                    #if winning the large zoom board, then you have won the game
                     print(competitor+" has won the game!")
                     print("You can continue playing if you would like, otherwise use endGame")          
 
@@ -162,15 +168,15 @@ def boardToString(board):
     readyForCommands: Event flag of whether to prompt for more commands
 '''
 def keyboardListening(threadcount,q, readyForCommands):
-    ArgumentLength={"makeMove":2,"seeBoard":0,"switchGame":1,"acceptGame":1,"pickLetter":1,"gameList":0,"undo":0,"acceptUndo":0,"denyUndo":0,"endGame":0,"newGame":4,"seeIP":0,"help":0,"currentGame":0,"rules":0,"loadGame":5,"saveGame":1,"openPort":1,"closePort":1,"portsList":0}
+    ArgumentLength={"makeMove":2,"seeBoard":0,"switchGame":1,"acceptGame":1,"pickLetter":1,"gameList":0,"undo":0,"acceptUndo":0,"denyUndo":0,"endGame":0,"newGame":4,"seeIP":0,"help":0,"arguments":1,"currentGame":0,"rules":0,"loadGame":5,"saveGame":1,"openPort":1,"closePort":1,"portsList":0}
     while True:
         readyForCommands.wait()
         #has to wait for output of other things to be printed out
         command = input("Input command: ")
-        splitOut=command.split()
+        splitOut=shlex.split(command)
         if(len(splitOut)==0):
             print("Invalid command")
-        elif(splitOut[0] in ["makeMove","seeBoard","switchGame","acceptGame","pickLetter","gameList","undo","acceptUndo","denyUndo","endGame","sendMessage","newGame","seeIP","currentGame","help","rules","loadGame","saveGame","openPort","closePort","portsList"]):
+        elif(splitOut[0] in ["makeMove","seeBoard","switchGame","acceptGame","pickLetter","gameList","undo","acceptUndo","denyUndo","endGame","sendMessage","newGame","seeIP","currentGame","help","arguments","rules","loadGame","saveGame","openPort","closePort","portsList"]):
             valid=False
             if(splitOut[0]=="sendMessage"):
                 valid=True
@@ -253,13 +259,18 @@ def handleCommands(activeGame, inputs, outputs, message_queues, serverSocks, ser
     board_size,game_indexes, indexes_to_game,competitors,your_character,your_move,second_last_move,last_move,\
         medium_zoom_board,large_zoom_board,your_undo_requests,their_undo_requests, readable,writable,exceptional,\
             emptyBoards, q, currentIndex):
+    lineNumbers={"help":(9,11),"arguments":(12,15),"rules":(16,18),"openPort":(23,27),"closePort":(28,32),"portsList":(33,35),\
+        "acceptGame":(36,40),"newGame":(41,49),"loadGame":(50,58),"pickLetter":(59,63),"makeMove":(68,73),\
+            "undo":(74,77),"acceptUndo":(78,80),"denyUndo":(81,83),"endGame":(84,86),'seeBoard':(87,89),\
+                "switchGame":(90,94),"gameList":(99,101),"seeIP":(102,104),"currentGame":(105,107),\
+                    "sendMessage":(112,116),"saveGame":(117,121)}
     while(not q.empty()):
         try:
             next_command = q.get_nowait()
         except queue.Empty:
             pass
         else:
-            splitOut=next_command.split()
+            splitOut=shlex.split(next_command)
             print("")
             if(len(splitOut)==0):
                 print("Invalid command")
@@ -312,11 +323,11 @@ def handleCommands(activeGame, inputs, outputs, message_queues, serverSocks, ser
             elif(splitOut[0]=="switchGame"):
                 try:
                     activeGame=indexes_to_game[int(splitOut[1])]
+                    print("The active game has switched to index "+splitOut[1]+" with "+competitors[activeGame])
                 except ValueError:
                     print("Invalid argument")
                 except KeyError:
-                    print("Invalid argument")
-                print("The active game has switched to index "+splitOut[1]+" with "+competitors[activeGame])
+                    print("Invalid argument")   
             elif(splitOut[0]=="acceptGame"):
                 if(activeGame is not None and activeGame in writable):
                     if(your_character[activeGame] not in ["X","O"]):
@@ -406,7 +417,7 @@ def handleCommands(activeGame, inputs, outputs, message_queues, serverSocks, ser
             elif(splitOut[0]=="sendMessage" and activeGame in writable):
                 if(activeGame is not None):
                     #the message is the whole command minus the sendMessage space
-                    msg="SC\n"+splitOut[1]
+                    msg="SC\n"+next_command[len("sendMessage "):]
                     activeGame.send(msg.encode())
                 else:
                     print("There is not an active game, use switchGame to choose one or newGame to start one.")
@@ -429,7 +440,6 @@ def handleCommands(activeGame, inputs, outputs, message_queues, serverSocks, ser
                     removeSocketFromEverything(sckt, inputs, outputs, message_queues, servers, game_boards, undo_boards,\
                             board_size,game_indexes, indexes_to_game,competitors,your_character,your_move,second_last_move,last_move,\
                                 medium_zoom_board,large_zoom_board,your_undo_requests,their_undo_requests, readable,writable,exceptional)
-                    print("Port has been closed.")
                 else:
                     print("There is not a socket associated with that port number.")
             elif(splitOut[0]=="portsList"):
@@ -486,10 +496,18 @@ def handleCommands(activeGame, inputs, outputs, message_queues, serverSocks, ser
                     try:
                         f=open(Path(splitOut[3]),"r")
                         CharBoard=f.read()
-                        char = CharBoard.split()[0]
-                        last = CharBoard.split()[1]
-                        lastMove = CharBoard.split()[2]
-                        board = CharBoard.split()[3]
+                        char = shlex.split(CharBoard)[0]
+                        last = shlex.split(CharBoard)[1]
+                        lastMove = shlex.split(CharBoard)[2]
+                        board = shlex.split(CharBoard)[3]
+                        if(char=="X"):
+                            #the character sent will be the character of the receiver instead of us
+                            commandMsg = "LG\n"+splitOut[4]+"\nO\n"+board+"\n"+splitOut[5]+"\n"+str(last)+"\n"+lastMove+"\n"+CharBoard.split()[4]+"\n"+CharBoard.split()[5]
+                        elif(char=="O"):
+                            commandMsg="LG\n"+splitOut[4]+"\nX\n"+board+"\n"+splitOut[5]+"\n"+str(last)+"\n"+lastMove+"\n"+CharBoard.split()[4]+"\n"+CharBoard.split()[5]
+                        else:
+                            print("Invalid File")
+                            noErrorsFlag=False
                     except IOError:
                         print("Invalid File")
                         noErrorsFlag=False
@@ -497,14 +515,6 @@ def handleCommands(activeGame, inputs, outputs, message_queues, serverSocks, ser
                         print("Invalid File")
                         noErrorsFlag=False
                     except IndexError:
-                        print("Invalid File")
-                        noErrorsFlag=False
-                    if(char=="X"):
-                        #the character sent will be the character of the receiver instead of us
-                        commandMsg = "LG "+splitOut[4]+" O "+board+" "+splitOut[5]+" "+str(last)+" "+lastMove+" "+CharBoard.split()[4]+" "+CharBoard.split()[5]
-                    elif(char=="O"):
-                        commandMsg="LG "+splitOut[4]+" X "+board+" "+splitOut[5]+" "+str(last)+" "+lastMove+" "+CharBoard.split()[4]+" "+CharBoard.split()[5]
-                    else:
                         print("Invalid File")
                         noErrorsFlag=False
                 if(noErrorsFlag):
@@ -532,10 +542,15 @@ def handleCommands(activeGame, inputs, outputs, message_queues, serverSocks, ser
                         your_move[activeGame]=True
                     last_move[activeGame]=lastMove.split(",")
                     second_last_move[activeGame]=[]
+                    print("Game loaded, waiting for response from competitor")
+                else:
+                    try:
+                        clientSocket.close()
+                    except:
+                        pass
             elif(splitOut[0]=="saveGame"):
                 location=splitOut[1]
                 board=game_boards[activeGame]
-                print(board)
                 try:
                     f=open(Path(location),"w")
                     print(your_character[activeGame]+" ",file=f,end="")
@@ -560,9 +575,9 @@ def handleCommands(activeGame, inputs, outputs, message_queues, serverSocks, ser
                     else:
                         print("B",file=f,end="")
                     f.close()
+                    print("The game was saved. ")
                 except IOError:
                     print("There was an error saving the game.")
-                print("The game was saved. ")
             elif(splitOut[0]=="seeIP"):
                 if(activeGame is not None and activeGame in writable):
                     print(activeGame.getpeername())
@@ -577,6 +592,17 @@ def handleCommands(activeGame, inputs, outputs, message_queues, serverSocks, ser
                 f=open(Path('userCommandsDocumentation.txt'),'r')
                 for line in f:
                     print(line)
+            elif(splitOut[0]=="arguments"):
+                cmnd = splitOut[1]
+                #f=open(Path('userCommandsDocumentation.txt'),'r')
+                if cmnd in lineNumbers.keys():
+                    try:
+                        for i in range(lineNumbers[cmnd][0],lineNumbers[cmnd][1]+1):
+                            print(linecache.getline('userCommandsDocumentation.txt',i))
+                    except:
+                        pass
+                else:
+                    print("Not a command. Use command help to see a list of all commands")
             elif(splitOut[0]=="rules"):
                 f=open(Path('rules.txt'),'r')
                 for line in f:
@@ -734,13 +760,13 @@ def handleData(command, data, s,activeGame, inputs, outputs, message_queues, ser
     return activeGame, currentIndex
 
 """
-socketListening: Responsible for listening for incoming communciations and executing commands
+    socketListening: Responsible for listening for incoming communciations and executing commands
 
-threadcount: iterable required for Threads
-q: Queue which keyboardListening adds outstanding commands to and this thread processes
-serverSocks: The queue of new server sockets to create
-readyForCommands: Event flag to prevent the keyboard listening thread from trying
-    to read commands while the app is printing out information
+    threadcount: iterable required for Threads
+    q: Queue which keyboardListening adds outstanding commands to and this thread processes
+    serverSocks: The queue of new server sockets to create
+    readyForCommands: Event flag to prevent the keyboard listening thread from trying
+        to read commands while the app is printing out information
 """
 def socketListening(threadcount,q,serverSocks, readyForCommands):
     """
@@ -888,6 +914,7 @@ listeningport=0
 threadcount=0
 print("You are ready to start playing Ultimate Tic-Tac-Toe")
 print("For help and list of commands, use the command help. For rules, use the command rules.")
+print("For information on just one command, use the command: arguments [command name]")
 commandsQueue = queue.Queue()
 serverSocks = queue.Queue()
 # a thread is created and started
